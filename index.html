@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Assistant — консультант по путешествиям</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    h1 { font-size: 24px; font-weight: 600; }
+    h2 { font-size: 18px; margin-top: 24px; margin-bottom: 12px; }
+
+    /* Форма */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    textarea { resize: none; height: 84px; }
+
+    .btn-submit {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+    }
+    .btn-submit:hover { background: var(--primary-hover); }
+    .btn-submit:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+    }
+
+    /* Участники — карточки */
+    .participants-container {
+      margin-top: 16px;
+      border: 1px dashed var(--border);
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .participant-card {
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      position: relative;
+      background: #f8fafc;
+    }
+    .participant-card:last-child { margin-bottom: 0; }
+    .remove-participant {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-size: 16px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .participant-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .participant-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Чат */
+    .chat-area {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      max-width: 80%;
+      text-align: left;
+    }
+    .message.bot {
+      align-self: flex-start;
+      background: #eef2ff;
+      color: var(--text);
+      max-width: 80%;
+      text-align: left;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .message:hover .copy-btn { opacity: 1; }
+
+    /* Панель управления чатом */
+    .chat-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-clear {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-clear:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* Индикация загрузки */
+    .loading {
+      align-self: center;
+      padding: 12px 24px;
+      background: var(--surface);
+      border: 1px dashed var(--muted);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      display: none;
+    }
+
+    /* Утилиты */
+    .hidden { display: none; }
+    .error-msg {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 6px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Travel Assistant</h1>
+      <p style="color: var(--muted); margin-top: 4px;">Консультант по путешествиям: маршруты, визы, страховки, проживание, транспорт, достопримечательности.</p>
+    </header>
+
+    <!-- Форма ввода -->
+    <form id="travel-form">
+      <h2>Параметры поездки</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="departure_date">Дата выезда</label>
+          <input type="date" id="departure_date" required />
+        </div>
+        <div class="form-group">
+          <label for="return_date">Дата возвращения</label>
+          <input type="date" id="return_date" />
+        </div>
+
+        <div class="form-group">
+          <label for="origin_city">Город отправления</label>
+          <input type="text" id="origin_city" placeholder="Например: Москва" required />
+        </div>
+        <div class="form-group">
+          <label for="budget_amount">Ориентировочный бюджет (в выбранной валюте)</label>
+          <input type="number" id="budget_amount" placeholder="Сумма" min="1" step="1" required />
+        </div>
+
+        <div class="form-group">
+          <label for="budget_currency">Валюта</label>
+          <select id="budget_currency" required>
+            <option value="RUB">RUB (₽)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="participants_count">Количество участников</label>
+          <input type="number" id="participants_count" value="1" min="1" max="20" required />
+        </div>
+      </div>
+
+      <!-- Участники (динамически генерируются JS) -->
+      <h3>Данные участников</h3>
+      <div class="participants-container" id="participants-container">
+        <!-- Сюда JS добавит карточки участников -->
+      </div>
+
+      <div class="form-group">
+        <label for="user_message">Ваш запрос (маршрут, активности, советы и т.п.)</label>
+        <textarea id="user_message" placeholder="Например: «Маршрут на 3 дня в Казань с бюджетом до 30 000 ₽»" maxlength="2048" required></textarea>
+        <div id="char-count" style="text-align: right; font-size: 12px; color: var(--muted); margin-top: 4px;">
+          Символов: <span id="char-count-val">0</span>/2048
+        </div>
+        <div id="msg-error" class="error-msg">Сообщение слишком длинное (максимум 2048 символов).</div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="send-btn">Получить рекомендации</button>
+    </form>
+
+    <!-- Чат-область -->
+    <h2>История диалога</h2>
+    <div class="chat-area" id="chat-area"></div>
+    <div class="loading" id="loading-msg">Ассистент думает…</div>
+
+    <div class="chat-controls">
+      <button class="btn-clear" id="clear-chat-btn">Очистить историю</button>
+      <span style="font-size: 13px; color: var(--muted);">Сессия сохраняется в браузере</span>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://127.0.0.1:10000/chat';
+
+    // Защита от XSS: экранирование HTML
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Копирование сообщения
+    async function copyMessage(btn) {
+      const msgEl = btn.closest('.message');
+      const text = msgEl.textContent || msgEl.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        const originalText = btn.innerText || 'Копировать';
+        btn.innerText = 'Скопировано';
+        setTimeout(() => (btn.innerText = originalText), 2000);
+      } catch (e) {
+        console.warn('Не удалось скопировать в буфер обмена');
+      }
+    }
+
+    // Рендер сообщения
+    function renderMessage(text, role) {
+      const chatArea = document.getElementById('chat-area');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      const safeText = escapeHtml(text);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'copy-btn';
+      copyBtn.innerText = 'Копировать';
+      copyBtn.onclick = (e) => { e.stopPropagation(); copyMessage(copyBtn); };
+
+      div.innerHTML = `<div>${safeText.replace(/\n/g, '<br>')}</div>`;
+      div.appendChild(copyBtn);
+      chatArea.appendChild(div);
+      chatArea.scrollTop = chatArea.scrollHeight;
+
+      // Сохраняем в localStorage
+      const history = JSON.parse(localStorage.getItem('travel-chat-history') || '[]');
+      history.push({ role, content: text });
+      localStorage.setItem('travel-chat-history', JSON.stringify(history));
+    }
+
+    // Восстановление истории
+    function restoreHistory() {
+      const history = JSON.parse(localStorage.getItem('travel-chat-history') || '[]');
+      const chatArea = document.getElementById('chat-area');
+      chatArea.innerHTML = '';
+      history.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `message ${m.role}`;
+        const safeText = escapeHtml(m.content);
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerText = 'Копировать';
+        copyBtn.onclick = (e) => { e.stopPropagation(); copyMessage(copyBtn); };
+        div.innerHTML = `<div>${safeText.replace(/\n/g, '<br>')}</div>`;
+        div.appendChild(copyBtn);
+        chatArea.appendChild(div);
+      });
+    }
+
+    // Генерация карточек участников
+    function updateParticipants() {
+      const count = parseInt(document.getElementById('participants_count').value, 10) || 1;
+      const container = document.getElementById('participants-container');
+      container.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+                const card = document.createElement('div');
+        card.className = 'participant-card';
+        card.innerHTML = `
+          <button type="button" class="remove-participant" title="Удалить участника">&times;</button>
+          <h4>Участник ${i + 1}</h4>
+          <div class="participant-grid">
+            <div class="form-group">
+              <label>Пол</label>
+              <select name="gender">
+                <option value="">Не указано</option>
+                <option value="M">М</option>
+                <option value="F">Ж</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Возрастной диапазон</label>
+              <input type="text" placeholder="Например: 25–35 лет" name="age_range">
+            </div>
+            <div class="form-group">
+              <label>Гражданство</label>
+              <input type="text" placeholder="Например: РФ" name="citizenship">
+            </div>
+            <div class="form-group">
+              <label>Мобильность</label>
+              <input type="text" placeholder="Например: без лестниц, пандус" name="mobility">
+            </div>
+            <div class="form-group">
+              <label>Пищевые предпочтения</label>
+              <input type="text" placeholder="Любая кухня, вегетарианская, веганская" name="diet_preferences">
+            </div>
+          </div>
+        `;
+
+        // Кнопка удаления участника
+        const removeBtn = card.querySelector('.remove-participant');
+        removeBtn.onclick = () => {
+          const currentCount = parseInt(document.getElementById('participants_count').value, 10) || 1;
+          if (currentCount > 1) {
+            document.getElementById('participants_count').value = currentCount - 1;
+            updateParticipants();
+          } else {
+            alert('Должен быть хотя бы один участник');
+          }
+        };
+
+        container.appendChild(card);
+      }
+    }
+
+    // Валидация длины сообщения
+    const msgInput = document.getElementById('user_message');
+    const charCountVal = document.getElementById('char-count-val');
+    const msgError = document.getElementById('msg-error');
+    msgInput.addEventListener('input', () => {
+      const len = msgInput.value.length;
+      charCountVal.innerText = len;
+      if (len > 2048) {
+        msgError.style.display = 'block';
+        msgInput.setCustomValidity('Сообщение слишком длинное');
+      } else {
+        msgError.style.display = 'none';
+        msgInput.setCustomValidity('');
+      }
+    });
+
+    // Отправка запроса
+    document.getElementById('travel-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sendBtn = document.getElementById('send-btn');
+      const loadingMsg = document.getElementById('loading-msg');
+
+      sendBtn.disabled = true;
+      loadingMsg.style.display = 'block';
+
+      // Сбор данных формы
+      const participantsCount = parseInt(document.getElementById('participants_count').value, 10) || 1;
+      const cards = document.querySelectorAll('.participant-card');
+      const participants = [];
+
+      for (let i = 0; i < participantsCount; i++) {
+        const card = cards[i];
+        participants.push({
+          gender: card.querySelector('select[name="gender"]').value || null,
+          age_range: card.querySelector('input[name="age_range"]').value.trim() || null,
+          citizenship: card.querySelector('input[name="citizenship"]').value.trim() || null,
+          mobility: card.querySelector('input[name="mobility"]').value.trim() || null,
+          diet_preferences: card.querySelector('input[name="diet_preferences"]').value.trim() || null
+        });
+      }
+
+      const formData = {
+        user_message: msgInput.value.trim(),
+        departure_date: document.getElementById('departure_date').value || null,
+        return_date: document.getElementById('return_date').value || null,
+        origin_city: document.getElementById('origin_city').value.trim() || null,
+        budget_amount: parseFloat(document.getElementById('budget_amount').value) || null,
+        budget_currency: document.getElementById('budget_currency').value,
+        participants_count: participantsCount,
+        participants: participants
+      };
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Ошибка сервера: ${res.status}`);
+        }
+
+        const data = await res.json();
+        renderMessage(data.response, 'bot');
+      } catch (err) {
+        console.error(err);
+        renderMessage(`Ошибка: ${err.message}`, 'bot');
+      } finally {
+        sendBtn.disabled = false;
+        loadingMsg.style.display = 'none';
+        msgInput.value = '';
+        charCountVal.innerText = '0';
+      }
+    });
+
+    // Очистка истории
+    document.getElementById('clear-chat-btn').addEventListener('click', () => {
+      if (confirm('Вы уверены, что хотите очистить историю диалога?')) {
+        document.getElementById('chat-area').innerHTML = '';
+        localStorage.removeItem('travel-chat-history');
+      }
+    });
+
+    // Пересчёт участников при изменении количества
+    document.getElementById('participants_count').addEventListener('change', updateParticipants);
+    document.getElementById('participants_count').addEventListener('input', updateParticipants);
+
+    // Восстановление истории при загрузке
+    restoreHistory();
+    // Инициализация карточек участников при загрузке страницы
+    updateParticipants();
+  </script>
+</body>
+</html>
