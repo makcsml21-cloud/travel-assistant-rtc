@@ -2,111 +2,98 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Travel Assistant — Планировщик путешествий</title>
+  <title>Travel Assistant</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 0 20px;
-      background-color: #f5f5f5;
-    }
-    h1 { color: #2c3e50; }
-    .container {
-      background: white;
-      padding: 24px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    textarea {
-      width: 100%;
-      height: 120px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
-      font-size: 14px;
-      box-sizing: border-box;
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input[type="text"], input[type="number"], textarea {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
     }
     button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
+      padding: 12px 20px; background-color: #3498db; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 16px;
     }
     button:hover { background-color: #2980b9; }
     #assistant-response {
-      margin-top: 25px;
-      padding: 15px;
-      background-color: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 4px;
-      white-space: pre-wrap; /* сохраняет переносы строк */
-      color: #333;
+      margin-top: 25px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd;
+      border-radius: 6px; white-space: pre-wrap; /* сохраняет переносы строк */
     }
     .error { color: #c0392b; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🗺️ Travel Assistant</h1>
-    <p>Расскажи, куда хочешь поехать, на сколько дней и какой бюджет — помогу составить маршрут.</p>
+  <h1>🗺️ Travel Assistant — планировщик путешествий</h1>
 
-    <label for="user-message"><strong>Твой запрос:</strong></label><br>
-    <textarea id="user-message" placeholder="Например: Маршрут в Казань на 3 дня, бюджет до 30 000 ₽, 2 человека..."></textarea>
-
-    <button onclick="sendMessage()">Получить маршрут</button>
-
-    <div id="assistant-response"></div>
+  <div class="form-group">
+    <label for="user-message">Твой запрос (город, дни, что хочется увидеть и т.п.)</label>
+    <textarea id="user-message" rows="4" placeholder="Например: маршрут в Казань на 3 дня, хочу музеи и парки, без долгих переездов"></textarea>
   </div>
 
+  <div class="form-group">
+    <label for="origin-city">Город отправления</label>
+    <input type="text" id="origin-city" value="Москва" placeholder="Москва, Санкт-Петербург..." />
+  </div>
+
+  <div class="form-group">
+    <label for="budget-amount">Бюджет (руб., ориентировочно)</label>
+    <input type="number" id="budget-amount" value="30000" placeholder="30000" />
+  </div>
+
+  <div class="form-group">
+    <label for="participants-count">Количество участников</label>
+    <input type="number" id="participants-count" value="2" min="1" max="20" />
+  </div>
+
+  <button onclick="sendMessage()">Получить маршрут</button>
+
+  <div id="assistant-response"></div>
+
   <script>
-    // URL API: относительный путь, работает и локально, и на Render
     const API_URL = '/chat';
 
     async function sendMessage() {
-      const messageInput = document.getElementById('user-message');
-      const responseDiv = document.getElementById('assistant-response');
-      
-      const userMessage = messageInput.value.trim();
+      const messageEl = document.getElementById('user-message');
+      const originEl = document.getElementById('origin-city');
+      const budgetEl = document.getElementById('budget-amount');
+      const participantsEl = document.getElementById('participants-count');
+      const responseEl = document.getElementById('assistant-response');
+
+      const userMessage = messageEl.value.trim();
       if (!userMessage) {
-        responseDiv.textContent = 'Пожалуйста, напишите запрос!';
+        responseEl.className = 'error';
+        responseEl.textContent = 'Пожалуйста, напишите запрос в первом поле.';
         return;
       }
 
-      responseDiv.textContent = 'Думаю над маршрутом...';
+      responseEl.className = '';
+      responseEl.textContent = 'Думаю над маршрутом...';
 
       try {
         const payload = {
           user_message: userMessage,
-          origin_city: 'Москва', // можно сделать отдельным полем, если нужно
-          budget_amount: 30000, // можно сделать отдельным полем
-          participants_count: 2
+          origin_city: originEl.value.trim() || 'Москва',
+          budget_amount: parseFloat(budgetEl.value) || 30000,
+          participants_count: parseInt(participantsEl.value, 10) || 2
         };
 
         const res = await fetch(API_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.detail || `Ошибка HTTP: ${res.status}`);
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Ошибка HTTP: ${res.status}`);
         }
 
         const data = await res.json();
-        responseDiv.textContent = data.response;
+        responseEl.textContent = data.response;
       } catch (error) {
         console.error(error);
-        responseDiv.className = 'error';
-        responseDiv.textContent = 'Ошибка: ' + error.message;
+        responseEl.className = 'error';
+        responseEl.textContent = 'Ошибка: ' + error.message;
       }
     }
   </script>

@@ -1,27 +1,35 @@
 import os
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import requests
 from dotenv import load_dotenv
 
-# Загружаем переменные из .env (локально)
 load_dotenv()
 
 YA_API_KEY = os.getenv("YA_API_KEY")
 YA_FOLDER_ID = os.getenv("YA_FOLDER_ID")
 
 if not YA_API_KEY or not YA_FOLDER_ID:
-    raise RuntimeError("Не найдены YA_API_KEY или YA_FOLDER_ID в переменных окружения. Проверьте .env локально и Settings в Render.")
+    raise RuntimeError("Не найдены YA_API_KEY или YA_FOLDER_ID в переменных окружения. Проверьте Render Settings.")
 
 app = FastAPI()
 
-# --- Модели данных ---
+# Разрешаем браузеру делать запросы с фронтенда на бэкенд
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class Participant(BaseModel):
     age: int
-    role: str  # например: adult, child
+    role: str
 
 class TravelRequest(BaseModel):
     user_message: str = Field(..., min_length=1, max_length=2048)
@@ -33,7 +41,6 @@ class TravelRequest(BaseModel):
     participants_count: int = Field(1, ge=1, le=20)
     participants: List[Participant] = []
 
-# --- Логика формирования промпта и запроса к YandexGPT ---
 def build_yandex_payload(req: TravelRequest) -> dict:
     base_prompt = (
         "Ты — ассистент по организации путешествий по России. Твоя задача — давать конкретные, "
@@ -96,7 +103,6 @@ def call_yandex_gpt(req: TravelRequest) -> str:
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Ошибка связи с LLM: {e}")
 
-# --- Эндпоинты API ---
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -106,14 +112,11 @@ def chat(req: TravelRequest):
     response_text = call_yandex_gpt(req)
     return {"response": response_text}
 
-# --- Раздача фронтенда (под твою структуру: index.html в корне) ---
 @app.get("/")
 def serve_index():
-    """Главная страница: отдаёт index.html из корня проекта"""
-    # Путь относительный от корня проекта (где лежит backend/)
+    # Отдаёт index.html из корня проекта
     return FileResponse("index.html")
 
-# Эта часть нужна только для локальной отладки (python main.py)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
